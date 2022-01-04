@@ -17,22 +17,30 @@ router.get('/verifytoken', async (req, res, next) => {
 
 router.post('/login', async (req, res, next)=>{
   const user = await usersCollection.findOne({username: req.body.username});
-  if (!user) res.json({msg: 'no user'});
+  if (!user) {
+    res.status(401);
+    res.json({msg: 'no user'});
+  }
   const hashedPassword = user.password;
   const same = await bcrypt.compare(req.body.password, hashedPassword);
-  if(!same) res.json({msg: 'wrong password'});
-  const token = jwt.sign({
-    username: user.username,
-    role: user.role
-  }, jwtKey, {expiresIn: '1h'});
-  res.status(200);
-  res.cookie('token', token, {
-    maxAge: 900000,
-    httpOnly: false,
-    sameSite: "None",
-    secure: true
-  });
-  res.json(token);
+  if(!same) {
+    res.status(401);
+    res.clearCookie('token');
+    res.json({msg: 'wrong password'});
+  } else {
+    const token = jwt.sign({
+      username: user.username,
+      role: user.role
+    }, jwtKey, {expiresIn: '1h'});
+    res.status(200);
+    res.cookie('token', token, {
+      maxAge: 900000,
+      httpOnly: false,
+      sameSite: "None",
+      secure: true
+    });
+    res.json(token);
+  }
 })
 
 router.post('/', async (req, res, next) => {
